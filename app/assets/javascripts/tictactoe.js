@@ -58,6 +58,7 @@ function doTurn(pos) {
 
 function resetBoard() {
   turn = 0;
+  game = 0;
   const squares = $('td')
   for (let i = 0; i < 9; i++) {
     squares[i].innerHTML = '';
@@ -72,15 +73,12 @@ function boardStatus() {
       turn++;
     }
   }
-  if (checkWinner()) {
-    $('td').off();
-  }
 }
 
 function attachListeners() {
   $('td').each(function () {
     $(this).on('click', function () {
-       if ($(this).text() === "") {
+       if ($(this).text() === "" && !checkWinner()) {
         doTurn(this);
       };
     });
@@ -94,10 +92,8 @@ function clearGame(){
   $('button#clear').on('click', function (){
     resetBoard();
     turn = 0;
-    attachListeners();
     setMessage("");
   });
-  saveGame();
 }
 
 function showPrevious() {
@@ -123,7 +119,7 @@ function loadGame() {
         space[i].innerHTML = board[i]
       }
       boardStatus();
-      saveToUpdate(id);
+      game = id;
     });
   });
 }
@@ -131,40 +127,31 @@ function loadGame() {
 function saveGame() {
   $('button#save').on('click', function() {
     const squares = $('td')
-    let game = [];
+    let gameState = [];
     for (let i = 0; i < 9; i++) {
-      game.push(squares[i].innerHTML);
+      gameState.push(squares[i].innerHTML);
     }
-    $.post('/games', {state: game})
-      .done(function(data){
-        saveToUpdate(data.data.id);
-      });
+    if (game) {
+      $.ajax({
+        url: '/games/' + game,
+        data: {state:gameState},
+        type: 'PATCH'
+      })
+    } else {
+      $.post('/games', {state: gameState}, function(response){
+        game = response.data.id;
+      })
+    }
   });
 }
 
 function autoSave() {
   const squares = $('td')
-  let game = [];
+  let gameState = [];
   for (let i = 0; i < 9; i++) {
-    game.push(squares[i].innerHTML);
+    gameState.push(squares[i].innerHTML);
   }
-  $.post('/games', {state: game})
-}
-
-function saveToUpdate(id){
-  $('button#save').off();
-  $('button#save').on('click', function() {
-    const squares = $('td')
-    let game = [];
-    for (let i = 0; i < 9; i++) {
-      game.push(squares[i].innerHTML);
-    }
-    $.ajax({
-      url: '/games/' + id,
-      data: {state:game},
-      type: 'PATCH'
-    })
-  });
+  $.post('/games', {state: gameState})
 }
 
 $(function () {
